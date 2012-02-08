@@ -348,20 +348,18 @@ module Databasedotcom
       end
 
       def self.soql_conditions_for(params)
-        params.inject([]) do |arr, av|
-          case av[1]
+        params.map do |key,value|
+          case value
             when String
-              value_str = "'#{av[1].gsub("'", "\\\\'")}'"
+              value_str = "'#{value.gsub("'", "\\\\'")}'"
             when DateTime, Time
-              value_str = av[1].strftime(RUBY_VERSION.match(/^1.8/) ? "%Y-%m-%dT%H:%M:%S.000%z" : "%Y-%m-%dT%H:%M:%S.%L%z").insert(-3, ":")
+              value_str = value.strftime(RUBY_VERSION.match(/^1.8/) ? "%Y-%m-%dT%H:%M:%S.000%z" : "%Y-%m-%dT%H:%M:%S.%L%z").insert(-3, ":")
             when Date
-              value_str = av[1].strftime("%Y-%m-%d")
+              value_str = value.strftime("%Y-%m-%d")
             else
-              value_str = av[1].to_s
+              value_str = value.to_s
           end
-
-          arr << "#{av[0]} = #{value_str}"
-          arr
+          "#{key} = #{value_str}"
         end.join(" AND ")
       end
     end

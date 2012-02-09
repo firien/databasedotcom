@@ -159,6 +159,11 @@ describe Databasedotcom::Sobject::Sobject do
         TestClass.all(:conditions => {:this => 'that'}).should == "foo"
       end
 
+      it "queries for given condition (array value)" do
+        @client.should_receive(:query).with("SELECT #{@field_names.join(',')} FROM TestClass WHERE this IN ('that','was')").and_return("foo")
+        TestClass.all(:conditions => {:this => %w(that was)}).should == "foo"
+      end
+
       it "queries with limit" do
         @client.should_receive(:query).with("SELECT #{@field_names.join(',')} FROM TestClass LIMIT 5").and_return("foo")
         TestClass.all(:limit => 5).should == "foo"

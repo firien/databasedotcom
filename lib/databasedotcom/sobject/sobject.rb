@@ -364,18 +364,27 @@ module Databasedotcom
 
       def self.soql_conditions_for(params)
         params.map do |key,value|
-          case value
-            when String
-              value_str = "'#{value.gsub("'", "\\\\'")}'"
-            when DateTime, Time
-              value_str = value.strftime(RUBY_VERSION.match(/^1.8/) ? "%Y-%m-%dT%H:%M:%S.000%z" : "%Y-%m-%dT%H:%M:%S.%L%z").insert(-3, ":")
-            when Date
-              value_str = value.strftime("%Y-%m-%d")
-            else
-              value_str = value.to_s
+          if value.kind_of? Array
+            value_str = value.map { |v| quoted_value v }
+            "#{key} IN (#{value_str.join(',')})"
+          else
+            value_str = quoted_value value
+            "#{key} = #{value_str}"
           end
-          "#{key} = #{value_str}"
         end.join(" AND ")
+      end
+
+      def self.quoted_value value
+        case value
+          when String
+            value_str = "'#{value.gsub("'", "\\\\'")}'"
+          when DateTime, Time
+            value_str = value.strftime(RUBY_VERSION.match(/^1.8/) ? "%Y-%m-%dT%H:%M:%S.000%z" : "%Y-%m-%dT%H:%M:%S.%L%z").insert(-3, ":")
+          when Date
+            value_str = value.strftime("%Y-%m-%d")
+          else
+            value_str = value.to_s
+        end
       end
     end
   end

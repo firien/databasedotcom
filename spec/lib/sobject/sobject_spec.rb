@@ -153,6 +153,31 @@ describe Databasedotcom::Sobject::Sobject do
         @client.should_receive(:query).with("SELECT #{@field_names.join(',')} FROM TestClass").and_return("foo")
         TestClass.all.should == "foo"
       end
+
+      it "queries for given condition" do
+        @client.should_receive(:query).with("SELECT #{@field_names.join(',')} FROM TestClass WHERE this = 'that'").and_return("foo")
+        TestClass.all(:conditions => {:this => 'that'}).should == "foo"
+      end
+
+      it "queries with limit" do
+        @client.should_receive(:query).with("SELECT #{@field_names.join(',')} FROM TestClass LIMIT 5").and_return("foo")
+        TestClass.all(:limit => 5).should == "foo"
+      end
+
+      it "queries with order (implied ASC sorting)" do
+        @client.should_receive(:query).with("SELECT #{@field_names.join(',')} FROM TestClass ORDER BY this ASC").and_return("foo")
+        TestClass.all(:order => 'this').should == "foo"
+      end
+
+      it "queries with order" do
+        @client.should_receive(:query).with("SELECT #{@field_names.join(',')} FROM TestClass ORDER BY this DESC").and_return("foo")
+        TestClass.all(:order => 'this DESC').should == "foo"
+      end
+
+      it "queries with order" do
+        @client.should_receive(:query).with("SELECT #{@field_names.join(',')} FROM TestClass WHERE this = 'that' ORDER BY this DESC LIMIT 5").and_return("foo")
+        TestClass.all(:conditions => {:this => 'that'}, :limit => 5, :order => 'this DESC').should == "foo"
+      end
     end
 
     describe ".query" do

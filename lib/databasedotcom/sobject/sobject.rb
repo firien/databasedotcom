@@ -216,8 +216,23 @@ module Databasedotcom
       #
       #    client.materialize("Car")
       #    Car.all    #=>   [#<Car @Id="1", ...>, #<Car @Id="2", ...>, #<Car @Id="3", ...>, ...]
-      def self.all
-        self.client.query("SELECT #{self.field_list} FROM #{self.sobject_name}")
+      #    Car.all(:conditions => { :Color => 'Red'})
+      #               #=>   [#<Car @Id="1", @Color => 'Red', ...>, #<Car @Id="8", @Color => 'Red', ...>, ...]
+      def self.all(options={})
+        soql = "SELECT #{field_list} FROM #{sobject_name}"
+        if options[:conditions]
+          conditions = soql_conditions_for(options[:conditions])
+          soql << " WHERE " << conditions
+        end
+        if options[:order]
+          order = options[:order]
+          soql << " ORDER BY " << order
+          if order !~ /\b(?:A|DE)+SC\b/i
+            soql << " ASC"
+          end
+        end
+        soql << " LIMIT #{options[:limit]}" if options[:limit]
+        self.client.query soql
       end
 
       # Returns a collection of instances of self that match the conditional +where_expr+, which is the WHERE part of a SOQL query.

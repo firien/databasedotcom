@@ -59,7 +59,7 @@ module Databasedotcom
     #    ca_file
     #    verify_mode
     # If the environment variables DATABASEDOTCOM_CLIENT_ID, DATABASEDOTCOM_CLIENT_SECRET, DATABASEDOTCOM_HOST,
-    # DATABASEDOTCOM_DEBUGGING, DATABASEDOTCOM_VERSION, DATABASEDOTCOM_SOBJECT_MODULE, DATABASEDOTCOM_CA_FILE, and/or 
+    # DATABASEDOTCOM_DEBUGGING, DATABASEDOTCOM_VERSION, DATABASEDOTCOM_SOBJECT_MODULE, DATABASEDOTCOM_CA_FILE, and/or
     # DATABASEDOTCOM_VERIFY_MODE are present, they override any other values provided
     def initialize(options = {})
       if options.is_a?(String)
@@ -83,7 +83,7 @@ module Databasedotcom
         self.client_secret = ENV['DATABASEDOTCOM_CLIENT_SECRET'] || @options[:client_secret]
         self.host = ENV['DATABASEDOTCOM_HOST'] || @options[:host] || "login.salesforce.com"
       end
-      
+
       self.debugging = ENV['DATABASEDOTCOM_DEBUGGING'] || @options[:debugging]
       self.version = ENV['DATABASEDOTCOM_VERSION'] || @options[:version]
       self.version = self.version.to_s if self.version
@@ -91,7 +91,7 @@ module Databasedotcom
       self.ca_file = ENV['DATABASEDOTCOM_CA_FILE'] || @options[:ca_file]
       self.verify_mode = ENV['DATABASEDOTCOM_VERIFY_MODE'] || @options[:verify_mode]
       self.verify_mode = self.verify_mode.to_i if self.verify_mode
-  end
+    end
 
     # Authenticate to the Force.com API.  _options_ is a Hash, interpreted as follows:
     #
@@ -105,7 +105,7 @@ module Databasedotcom
         req = https_request(self.host)
         user = self.username || options[:username]
         pass = self.password || options[:password]
-        path = "/services/oauth2/token?grant_type=password&client_id=#{self.client_id}&client_secret=#{client_secret}&username=#{user}&password=#{pass}"
+        path = encode_path_with_params('/services/oauth2/token', :grant_type => 'password', :client_id => self.client_id, :client_secret => self.client_secret, :username => user, :password => pass)
         log_request("https://#{self.host}/#{path}")
         result = req.post(path, "")
         log_response(result)
@@ -380,8 +380,8 @@ module Databasedotcom
     end
 
     def https_request(host=nil)
-      Net::HTTP.new(host || URI.parse(self.instance_url).host, 443).tap do |http| 
-        http.use_ssl = true 
+      Net::HTTP.new(host || URI.parse(self.instance_url).host, 443).tap do |http|
+        http.use_ssl = true
         http.ca_file = self.ca_file if self.ca_file
         http.verify_mode = self.verify_mode if self.verify_mode
       end
@@ -494,11 +494,16 @@ module Databasedotcom
       if attrs.is_a?(Hash)
         coerced_attrs = {}
         attrs.keys.each do |key|
-          case clazz.field_type(key)
+          case clazz.field_type(key.to_s)
             when "multipicklist"
               coerced_attrs[key] = (attrs[key] || []).join(';')
             when "datetime"
-              coerced_attrs[key] = attrs[key] ? attrs[key].strftime(RUBY_VERSION.match(/^1.8/) ? "%Y-%m-%dT%H:%M:%S.000%z" : "%Y-%m-%dT%H:%M:%S.%L%z") : nil
+              begin
+                attrs[key] = DateTime.parse(attrs[key]) if attrs[key].is_a?(String)
+                coerced_attrs[key] = attrs[key].strftime(RUBY_VERSION.match(/^1.8/) ? "%Y-%m-%dT%H:%M:%S.000%z" : "%Y-%m-%dT%H:%M:%S.%L%z")
+              rescue
+                nil
+              end
             when "date"
               if attrs[key]
                 coerced_attrs[key] = attrs[key].respond_to?(:strftime) ? attrs[key].strftime("%Y-%m-%d") : attrs[key]

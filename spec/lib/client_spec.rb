@@ -189,6 +189,13 @@ describe Databasedotcom::Client do
         WebMock.should have_requested(:post, "https://bro.baz/services/oauth2/token?grant_type=password&client_id=client_id&client_secret=client_secret&username=username&password=password")
       end
 
+      it "URL encodes the username and password" do
+        response_body = File.read(File.join(File.dirname(__FILE__), '..', "fixtures/auth_success_response.json"))
+        stub_request(:post, "https://bro.baz/services/oauth2/token?grant_type=password&client_id=client_id&client_secret=client_secret&username=user%26name&password=pass%26word").to_return(:body => response_body, :status => 200)
+        @client.authenticate(:username => "user&name", :password => "pass&word")
+        WebMock.should have_requested(:post, "https://bro.baz/services/oauth2/token?grant_type=password&client_id=client_id&client_secret=client_secret&username=user%26name&password=pass%26word")
+      end
+
       context "with a success response" do
         before do
           response_body = File.read(File.join(File.dirname(__FILE__), '..', "fixtures/auth_success_response.json"))
@@ -490,6 +497,7 @@ describe Databasedotcom::Client do
     end
 
     context "with a non-materialized class" do
+
       context "specified by the request" do
         before do
           @client.should_receive(:find_or_materialize).with("OtherWhizbang")
@@ -824,7 +832,7 @@ describe Databasedotcom::Client do
               @client.create(MySobjects::Whizbang, "Date_Field" => Date.civil(2011, 1, 1), "DateTime_Field" => DateTime.civil(2011, 2, 1, 12), "Picklist_Multiselect_Field" => %w(a b))
               WebMock.should have_requested(:post, "https://na1.salesforce.com/services/data/v23.0/sobjects/Whizbang").with(:body => {"Date_Field" => "2011-01-01", "DateTime_Field" => "2011-02-01T12:00:00.000+0000", "Picklist_Multiselect_Field" => "a;b"})
             end
-            
+
             it "does not apply coercion to String value in a 'date' field" do
               @client.create(MySobjects::Whizbang, "Date_Field" => "2011-01-01")
               WebMock.should have_requested(:post, "https://na1.salesforce.com/services/data/v23.0/sobjects/Whizbang").with(:body => %|{"Date_Field":"2011-01-01"}|)
@@ -867,9 +875,21 @@ describe Databasedotcom::Client do
               WebMock.should have_requested(:patch, "https://na1.salesforce.com/services/data/v23.0/sobjects/Whizbang/rid")
             end
 
+            it "persists the updated changes with names as symbols" do
+              stub_request(:patch, "https://na1.salesforce.com/services/data/v23.0/sobjects/Whizbang/rid").to_return(:body => nil, :status => 204)
+              @client.update("Whizbang", "rid", {:Name => "update"})
+              WebMock.should have_requested(:patch, "https://na1.salesforce.com/services/data/v23.0/sobjects/Whizbang/rid")
+            end
+            
             it "applies type coercions before serializing" do
               stub_request(:patch, "https://na1.salesforce.com/services/data/v23.0/sobjects/Whizbang/rid").to_return(:body => nil, :status => 204)
               @client.update("Whizbang", "rid", "Date_Field" => Date.civil(2011, 1, 1), "DateTime_Field" => DateTime.civil(2011, 2, 1, 12), "Picklist_Multiselect_Field" => %w(a b))
+              WebMock.should have_requested(:patch, "https://na1.salesforce.com/services/data/v23.0/sobjects/Whizbang/rid").with(:body => {"Date_Field" => "2011-01-01", "DateTime_Field" => "2011-02-01T12:00:00.000+0000", "Picklist_Multiselect_Field" => "a;b"})
+            end
+
+            it "applies type coercions with Dates represented as Strings" do
+              stub_request(:patch, "https://na1.salesforce.com/services/data/v23.0/sobjects/Whizbang/rid").to_return(:body => nil, :status => 204)
+              @client.update("Whizbang", "rid", "Date_Field" => Date.civil(2011, 1, 1).to_s, "DateTime_Field" => DateTime.civil(2011, 2, 1, 12).to_s, "Picklist_Multiselect_Field" => %w(a b))
               WebMock.should have_requested(:patch, "https://na1.salesforce.com/services/data/v23.0/sobjects/Whizbang/rid").with(:body => {"Date_Field" => "2011-01-01", "DateTime_Field" => "2011-02-01T12:00:00.000+0000", "Picklist_Multiselect_Field" => "a;b"})
             end
           end

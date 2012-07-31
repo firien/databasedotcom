@@ -365,16 +365,16 @@ module Databasedotcom
       def self.soql_conditions_for(params)
         params.map do |key,value|
           if value.kind_of? Array
-            value_str = value.map { |v| quoted_value v }
+            value_str = value.map { |v| soql_value v }
             "#{key} IN (#{value_str.join(',')})"
           else
-            value_str = quoted_value value
+            value_str = soql_value value
             "#{key} = #{value_str}"
           end
         end.join(" AND ")
       end
 
-      def self.quoted_value value
+      def self.soql_value value
         case value
           when String
             value_str = "'#{value.gsub("'", "\\\\'")}'"
